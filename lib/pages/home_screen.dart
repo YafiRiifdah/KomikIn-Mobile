@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '/widgets/bottom_navbar.dart';
 import '/widgets/comic_card.dart' show ComicCard, listComic;
 import '/widgets/search_filter.dart';
 
@@ -11,19 +10,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
   final List<String> genres = [
-    "Romantic",
-    "Drama",
-    "Magic",
-    "Action",
-    "Comedy",
-    "Horror",
-    "Psychology",
-    "Thriller",
-    "Adventure",
-    "Daily Life",
+    "Romantic", "Drama", "Magic", "Action", "Comedy",
+    "Horror", "Psychology", "Thriller", "Adventure", "Daily Life",
   ];
 
   void _showGenreFilter() {
@@ -36,19 +25,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return SearchFilter(
           genres: genres,
           onSelected: (genre) {
-            // Aksi setelah memilih genre
             print("Genre dipilih: $genre");
-            // Bisa kamu tambahkan filter list komik berdasarkan genre di sini.
+            // Tambahkan filter list komik jika diperlukan
           },
         );
       },
     );
-  }
-
-  void _onNavTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
   }
 
   @override
@@ -69,9 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const CircleAvatar(
                         radius: 24,
-                        backgroundImage: AssetImage(
-                          'assets/images/profile.png',
-                        ),
+                        backgroundImage: AssetImage('assets/images/profile.png'),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -157,10 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavbar(
-        currentIndex: _selectedIndex,
-        onTap: _onNavTapped,
       ),
     );
   }

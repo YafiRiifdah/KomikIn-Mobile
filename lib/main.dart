@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pages/home_screen.dart';
+import 'pages/main_screen.dart'; 
 
 void main() {
   runApp(const MyApp());
@@ -13,11 +13,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'KomikIn',
       theme: ThemeData(
-        fontFamily: 'Poppins', // Tambahkan ini untuk menggunakan font Poppins
+        fontFamily: 'Poppins',
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(), // <--- ganti ke sini
       debugShowCheckedModeBanner: false,
     );
   }
