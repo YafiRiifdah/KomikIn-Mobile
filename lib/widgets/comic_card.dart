@@ -84,65 +84,66 @@ List<Comic> listComic = [
 ];
 
 class ComicCard extends StatelessWidget {
-  final String title;
-  final String language;
-  final int chapter;
-  final String imageAsset;
+  final Comic comic;
+  final VoidCallback? onTap;
 
   const ComicCard({
     super.key,
-    required this.title,
-    required this.language,
-    required this.chapter,
-    required this.imageAsset,
+    required this.comic,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: 16 / 9, // Landscape ratio
-              child: Image.asset(
-                imageAsset,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                // Biar teks tidak kepotong
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(language, style: const TextStyle(color: Colors.grey)),
-                  ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.asset(
+                  comic.imageAsset,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
-              Text(
-                'Chapter $chapter',
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        comic.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        comic.language,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'Chapter ${comic.chapter}',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

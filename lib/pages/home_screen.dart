@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/widgets/comic_card.dart' show ComicCard, listComic;
 import '/widgets/search_filter.dart';
+import '/pages/comic_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,8 +12,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final List<String> genres = [
-    "Romantic", "Drama", "Magic", "Action", "Comedy",
-    "Horror", "Psychology", "Thriller", "Adventure", "Daily Life",
+    "Romantic",
+    "Drama",
+    "Magic",
+    "Action",
+    "Comedy",
+    "Horror",
+    "Psychology",
+    "Thriller",
+    "Adventure",
+    "Daily Life",
   ];
 
   void _showGenreFilter() {
@@ -51,7 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const CircleAvatar(
                         radius: 24,
-                        backgroundImage: AssetImage('assets/images/profile.png'),
+                        backgroundImage: AssetImage(
+                          'assets/images/profile.png',
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -126,12 +137,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: ListView.builder(
                   itemCount: listComic.length,
-                  itemBuilder: (context, index) => ComicCard(
-                    title: listComic[index].title,
-                    language: listComic[index].language,
-                    chapter: listComic[index].chapter,
-                    imageAsset: listComic[index].imageAsset,
-                  ),
+                  itemBuilder: (context, index) {
+                    final comic = listComic[index];
+                    return ComicCard(
+                      comic: comic,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ComicDetailScreen(comic: comic),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ],
