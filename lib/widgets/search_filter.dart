@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 
 class SearchFilter extends StatelessWidget {
   final List<String> genres;
-  final void Function(String)? onSelected;
+  final Function(String) onSelected;
+  final String? selectedGenre;
 
   const SearchFilter({
-    super.key,
+    Key? key,
     required this.genres,
-    this.onSelected,
-  });
+    required this.onSelected,
+    this.selectedGenre,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,63 +19,144 @@ class SearchFilter extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
               width: 40,
               height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(10),
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            "Pilih Genre",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Filter by Genre',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  if (selectedGenre != null && selectedGenre != "All")
+                    TextButton(
+                      onPressed: () => onSelected("All"),
+                      child: Text(
+                        'Clear',
+                        style: TextStyle(
+                          color: Colors.blue[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: genres.map((genre) {
-              return GestureDetector(
-                onTap: () {
-                  if (onSelected != null) onSelected!(genre);
-                  Navigator.pop(context);
-                },
-                child: Chip(
-                  label: Text(
-                    genre,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                    ),
-                  ),
-                  backgroundColor: Colors.blue.shade50,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  elevation: 2,
-                  shadowColor: Colors.grey.withOpacity(0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                      color: Colors.blue.shade200,
-                    ),
-                  ),
+
+            const Divider(height: 1),
+
+            // Genre list
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.6,
                 ),
-              );
-            }).toList(),
-          ),
-        ],
+                padding: const EdgeInsets.all(16),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: genres.length,
+                  itemBuilder: (context, index) {
+                    final genre = genres[index];
+                    final isSelected = selectedGenre == genre;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: GestureDetector(
+                        onTap: () => onSelected(genre),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  )
+                                : LinearGradient(
+                                    colors: [
+                                      Colors.grey.shade100,
+                                      Colors.grey.shade100,
+                                    ],
+                                  ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.blue.withOpacity(0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : [],
+                            border: Border.all(
+                              color: isSelected ? Colors.blue : Colors.grey.shade300,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                genre == "All"
+                                    ? Icons.all_inclusive
+                                    : Icons.category,
+                                size: 20,
+                                color: isSelected ? Colors.white : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  genre,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight:
+                                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                                    color: isSelected ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(
+                                  Icons.check_circle,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

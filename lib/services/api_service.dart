@@ -1,0 +1,237 @@
+// lib/services/api_service.dart
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+// Pastikan path impor model Anda benar sesuai struktur folder Anda
+import 'package:komik_in/models/comic_model.dart';
+import 'package:komik_in/models/genre_model.dart';
+import 'package:komik_in/models/chapter_model.dart';
+import 'package:komik_in/models/chapter_pages_model.dart'; // <-- IMPOR UNTUK HALAMAN CHAPTER
+
+class ApiService {
+  // Menggunakan URL yang sudah Anda konfirmasi berfungsi
+  static const String _baseUrl = 'https://api.tascaid.space/api';
+
+  /*
+  // Opsi getBaseUrl yang lebih dinamis jika Anda kembali ke development lokal nanti
+  static String getBaseUrl() {
+    const String port = "8081"; // GANTI JIKA PORT BACKEND LOKAL ANDA BERBEDA
+    if (kIsWeb) {
+      return 'http://localhost:$port/api';
+    } else {
+      try {
+        if (Platform.isAndroid) {
+           return 'http://10.0.2.2:$port/api'; // Untuk emulator Android
+        } else if (Platform.isIOS) {
+           return 'http://localhost:$port/api'; // Untuk simulator iOS
+        }
+      } catch (e) {
+         // Platform.isAndroid/isIOS akan error di web, ini fallback
+         print("Platform check error (expected on web if not web build): $e");
+      }
+      // Default untuk device fisik, GANTI 'IP_LOKAL_KOMPUTER_ANDA'
+      return 'http://IP_LOKAL_KOMPUTER_ANDA:$port/api'; 
+    }
+  }
+  static final String _baseUrlDynamic = getBaseUrl(); // Jika Anda menggunakan getBaseUrl()
+  */
+
+  Future<PaginatedComicsResponse> getLatestComics({int page = 1, int limit = 10}) async {
+    final uri = Uri.parse('$_baseUrl/manga/latest?page=$page&limit=$limit');
+    print('[ApiService.getLatestComics] Fetching from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return PaginatedComicsResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.getLatestComics] Error: Expected a Map but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for latest comics');
+        }
+      } else {
+        print('[ApiService.getLatestComics] Failed: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to load latest comics (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.getLatestComics] Error: $e');
+      rethrow; // Lempar ulang error agar bisa ditangani di UI
+    }
+  }
+
+  Future<PaginatedComicsResponse> getPopularComics({int page = 1, int limit = 10}) async {
+    final uri = Uri.parse('$_baseUrl/manga/popular?page=$page&limit=$limit');
+    print('[ApiService.getPopularComics] Fetching from: $uri');
+     try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return PaginatedComicsResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.getPopularComics] Error: Expected a Map but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for popular comics');
+        }
+      } else {
+        print('[ApiService.getPopularComics] Failed: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to load popular comics (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.getPopularComics] Error: $e');
+      rethrow;
+    }
+  }
+  
+  Future<GenresResponse> getGenres() async {
+    final uri = Uri.parse('$_baseUrl/manga/genres');
+    print('[ApiService.getGenres] Fetching from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return GenresResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.getGenres] Error: Expected a Map but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for genres');
+        }
+      } else {
+        print('[ApiService.getGenres] Failed: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to load genres (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.getGenres] Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<ChaptersResponse> getMangaChapters(String mangaId, {int limit = 5000, int offset = 0, String? lang}) async {
+    String url = '$_baseUrl/manga/$mangaId/feed?limit=$limit&offset=$offset';
+    if (lang != null && lang.isNotEmpty) {
+      url += '&lang=$lang';
+    }
+    final uri = Uri.parse(url);
+    print('[ApiService.getMangaChapters] Fetching chapters from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return ChaptersResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.getMangaChapters] Error: Expected a Map for ChaptersResponse but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for manga chapters');
+        }
+      } else {
+        print('[ApiService.getMangaChapters] Failed for manga $mangaId: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to load chapters for manga $mangaId (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.getMangaChapters] Error for manga $mangaId: $e');
+      rethrow;
+    }
+  }
+
+  // Fungsi BARU untuk mengambil halaman chapter
+  Future<ChapterPagesData> getPagesForChapter(String chapterId) async {
+    final uri = Uri.parse('$_baseUrl/chapters/$chapterId/pages');
+    print('[ApiService.getPagesForChapter] Fetching from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 25)); // Timeout bisa disesuaikan
+        print('[ApiService.getPagesForChapter] Response Status Code: ${response.statusCode}');
+      print('[ApiService.getPagesForChapter] Response Body RAW: ${response.body}'); // <-- LOG INI PENTING
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return ChapterPagesData.fromJson(decodedJson);
+        } else {
+            print('[ApiService.getPagesForChapter] Error: Expected a Map for ChapterPagesData but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for chapter pages');
+        }
+      } else {
+        print('[ApiService.getPagesForChapter] Failed for chapter $chapterId: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to load pages for chapter $chapterId (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.getPagesForChapter] Error for chapter $chapterId: $e');
+      rethrow;
+    }
+  }
+
+  Future<PaginatedComicsResponse> searchComicsByGenre(String genreId, {int page = 1, int limit = 20}) async {
+    final uri = Uri.parse('$_baseUrl/manga/search/genre?genreIds=$genreId&page=$page&limit=$limit');
+    print('[ApiService.searchComicsByGenre] Fetching from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return PaginatedComicsResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.searchComicsByGenre] Error: Expected a Map but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for search comics by genre');
+        }
+      } else {
+         print('[ApiService.searchComicsByGenre] Failed: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to search comics by genre (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.searchComicsByGenre] Error: $e');
+      rethrow;
+    }
+  }
+
+  // FITUR BARU: Search by title only
+  Future<PaginatedComicsResponse> searchComicsByTitle(String title, {int page = 1, int limit = 10}) async {
+    final uri = Uri.parse('$_baseUrl/manga/search/title?title=${Uri.encodeComponent(title)}&page=$page&limit=$limit');
+    print('[ApiService.searchComicsByTitle] Fetching from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return PaginatedComicsResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.searchComicsByTitle] Error: Expected a Map but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for search comics by title');
+        }
+      } else {
+         print('[ApiService.searchComicsByTitle] Failed: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to search comics by title (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.searchComicsByTitle] Error: $e');
+      rethrow;
+    }
+  }
+
+  // FITUR BARU: Search by title AND genre (combined)
+  Future<PaginatedComicsResponse> searchComicsByTitleAndGenre(
+    String title, 
+    String genreId, 
+    {int page = 1, int limit = 10}
+  ) async {
+    final uri = Uri.parse('$_baseUrl/manga/search/combined?title=${Uri.encodeComponent(title)}&genreIds=$genreId&page=$page&limit=$limit');
+    print('[ApiService.searchComicsByTitleAndGenre] Fetching from: $uri');
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decodedJson = jsonDecode(response.body);
+        if (decodedJson is Map<String, dynamic>) {
+            return PaginatedComicsResponse.fromJson(decodedJson);
+        } else {
+            print('[ApiService.searchComicsByTitleAndGenre] Error: Expected a Map but got ${decodedJson.runtimeType}');
+            throw Exception('Invalid JSON format for search comics by title and genre');
+        }
+      } else {
+         print('[ApiService.searchComicsByTitleAndGenre] Failed: ${response.statusCode} Body: ${response.body}');
+        throw Exception('Failed to search comics by title and genre (${response.statusCode})');
+      }
+    } catch (e) {
+      print('[ApiService.searchComicsByTitleAndGenre] Error: $e');
+      rethrow;
+    }
+  }
+}
