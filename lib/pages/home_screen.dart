@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../widgets/comic_card.dart';
-import '../widgets/search_filter.dart';
-import '../pages/comic_detail_screen.dart';
-import '../pages/comic_list_screen.dart';
-import '../services/api_service.dart';
-import '../models/comic_model.dart';
-import '../models/genre_model.dart';
+import 'package:komik_in/widgets/comic_card.dart';
+import 'package:komik_in/widgets/search_filter.dart';
+import 'package:komik_in/pages/comic_detail_screen.dart';
+import 'package:komik_in/pages/comic_list_screen.dart';
+import 'package:komik_in/services/api_service.dart';
+import 'package:komik_in/models/comic_model.dart';
+import 'package:komik_in/models/genre_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
