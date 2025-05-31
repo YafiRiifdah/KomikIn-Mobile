@@ -77,10 +77,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchInitialLatestComics() async {
-    if (mounted) setState(() {
-      _latestComics = [];
-      _isLoadingLatest = true;
-    });
+    if (mounted)
+      setState(() {
+        _latestComics = [];
+        _isLoadingLatest = true;
+      });
 
     try {
       PaginatedComicsResponse response;
@@ -92,9 +93,17 @@ class _HomeScreenState extends State<HomeScreen> {
           limit: 6,
         );
       } else if (_searchQuery.isNotEmpty) {
-        response = await _apiService.searchComicsByTitle(_searchQuery, page: 1, limit: 6);
+        response = await _apiService.searchComicsByTitle(
+          _searchQuery,
+          page: 1,
+          limit: 6,
+        );
       } else if (_selectedGenreIdForFilter.isNotEmpty) {
-        response = await _apiService.searchComicsByGenre(_selectedGenreIdForFilter, page: 1, limit: 6);
+        response = await _apiService.searchComicsByGenre(
+          _selectedGenreIdForFilter,
+          page: 1,
+          limit: 6,
+        );
       } else {
         response = await _apiService.getLatestComics(page: 1, limit: 6);
       }
@@ -121,10 +130,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchInitialPopularComics() async {
-    if (mounted) setState(() {
-      _popularComics = [];
-      _isLoadingPopular = true;
-    });
+    if (mounted)
+      setState(() {
+        _popularComics = [];
+        _isLoadingPopular = true;
+      });
 
     try {
       final response = await _apiService.getPopularComics(page: 1, limit: 6);
@@ -221,7 +231,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    List<String> displayGenres = ["All", ..._fetchedGenres.map((genre) => genre.name)];
+    List<String> displayGenres = [
+      "All",
+      ..._fetchedGenres.map((genre) => genre.name),
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -257,9 +270,10 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(30),
-        border: _isSearchActive
-            ? Border.all(color: const Color(0xFF2196F3), width: 2)
-            : null,
+        border:
+            _isSearchActive
+                ? Border.all(color: const Color(0xFF2196F3), width: 2)
+                : null,
       ),
       child: Row(
         children: [
@@ -297,11 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Colors.grey[400],
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.close, size: 16, color: Colors.white),
               ),
             ),
           ],
@@ -346,7 +356,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap: _clearSearch,
-                    child: const Icon(Icons.close, size: 14, color: Color(0xFF1976D2)),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Color(0xFF1976D2),
+                    ),
                   ),
                 ],
               ),
@@ -363,7 +377,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.category, size: 16, color: Color(0xFF388E3C)),
+                  const Icon(
+                    Icons.category,
+                    size: 16,
+                    color: Color(0xFF388E3C),
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     _selectedGenreForFilter,
@@ -376,7 +394,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap: () => _onGenreSelected("All"),
-                    child: const Icon(Icons.close, size: 14, color: Color(0xFF388E3C)),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Color(0xFF388E3C),
+                    ),
                   ),
                 ],
               ),
@@ -392,11 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'No comics found for "$_searchQuery"',
@@ -409,10 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             Text(
               'Try searching with different keywords',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
             const SizedBox(height: 24),
             TextButton.icon(
@@ -422,7 +437,10 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFF2196F3),
                 backgroundColor: const Color(0xFFE3F2FD),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
             ),
           ],
@@ -450,10 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             Text(
               'Try refreshing or check back later',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -480,21 +495,37 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const CircleAvatar(
                           radius: 24,
-                          backgroundImage: AssetImage('assets/images/profile.png'),
+                          backgroundImage: AssetImage(
+                            'assets/images/profile.png',
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
-                            Text('Stay trending!', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text('Alfani', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Text(
+                              'Stay trending!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              'Alfani',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ],
                     ),
                     IconButton(
                       icon: const Icon(Icons.settings),
-                      onPressed: () { /* TODO: Aksi ke halaman settings/profile */ },
+                      onPressed: () {
+                        /* TODO: Aksi ke halaman settings/profile */
+                      },
                     ),
                   ],
                 ),
@@ -514,24 +545,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: Text(
                         _getDisplayTitle(),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: _selectedGenreForFilter != "All"
-                            ? const Color(0xFFE3F2FD)
-                            : null,
+                        color:
+                            _selectedGenreForFilter != "All"
+                                ? const Color(0xFFE3F2FD)
+                                : null,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
                         onPressed: _showGenreFilter,
                         icon: Icon(
                           Icons.filter_alt_outlined,
-                          color: _selectedGenreForFilter != "All"
-                              ? const Color(0xFF1976D2)
-                              : null,
+                          color:
+                              _selectedGenreForFilter != "All"
+                                  ? const Color(0xFF1976D2)
+                                  : null,
                         ),
                       ),
                     ),
@@ -545,13 +581,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ComicListScreen(
-                            category: 'latest',
-                            title: _getDisplayTitle(),
-                            searchQuery: _searchQuery,
-                            genreId: _selectedGenreIdForFilter,
-                            genres: _fetchedGenres,
-                          ),
+                          builder:
+                              (context) => ComicListScreen(
+                                category: 'latest',
+                                title: _getDisplayTitle(),
+                                searchQuery: _searchQuery,
+                                genreId: _selectedGenreIdForFilter,
+                                genres: _fetchedGenres,
+                              ),
                         ),
                       );
                     },
@@ -569,35 +606,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 _isLoadingLatest && _latestComics.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : _latestComics.isEmpty
-                        ? SizedBox(
-                            height: 300,
-                            child: _buildEmptyState(true),
-                          )
-                        : GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.65,
-                              crossAxisSpacing: 4,
-                              mainAxisSpacing: 4,
-                            ),
-                            itemCount: _latestComics.length,
-                            itemBuilder: (context, index) {
-                              final comic = _latestComics[index];
-                              return ComicCard(
-                                comic: comic,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ComicDetailScreen(comic: comic),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                    ? SizedBox(height: 300, child: _buildEmptyState(true))
+                    : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.65,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
                           ),
+                      itemCount: _latestComics.length,
+                      itemBuilder: (context, index) {
+                        final comic = _latestComics[index];
+                        return ComicCard(
+                          comic: comic,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        ComicDetailScreen(comic: comic),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
 
                 const SizedBox(height: 24),
 
@@ -614,10 +651,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const ComicListScreen(
-                            category: 'popular',
-                            title: 'Komik Populer',
-                          ),
+                          builder:
+                              (context) => const ComicListScreen(
+                                category: 'popular',
+                                title: 'Komik Populer',
+                              ),
                         ),
                       );
                     },
@@ -635,35 +673,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 _isLoadingPopular && _popularComics.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : _popularComics.isEmpty
-                        ? SizedBox(
-                            height: 300,
-                            child: _buildEmptyState(false),
-                          )
-                        : GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.65,
-                              crossAxisSpacing: 4,
-                              mainAxisSpacing: 4,
-                            ),
-                            itemCount: _popularComics.length,
-                            itemBuilder: (context, index) {
-                              final comic = _popularComics[index];
-                              return ComicCard(
-                                comic: comic,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ComicDetailScreen(comic: comic),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                    ? SizedBox(height: 300, child: _buildEmptyState(false))
+                    : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.65,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
                           ),
+                      itemCount: _popularComics.length,
+                      itemBuilder: (context, index) {
+                        final comic = _popularComics[index];
+                        return ComicCard(
+                          comic: comic,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        ComicDetailScreen(comic: comic),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
               ],
             ),
           ),

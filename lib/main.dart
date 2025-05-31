@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'pages/main_screen.dart'; 
+import 'package:komik_in/pages/signup_screen.dart';
+import 'pages/splash_screen.dart';
+import 'pages/login_screen.dart';
+import 'pages/main_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,8 +20,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MainScreen(), // <--- ganti ke sini
       debugShowCheckedModeBanner: false,
+      initialRoute: '/', 
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/main': (context) => const MainScreen(),
+        '/signup': (context) => const SignUpScreen(),
+      },
     );
   }
 }

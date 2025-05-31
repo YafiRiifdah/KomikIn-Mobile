@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:komik_in/models/comic_model.dart';
 import 'package:komik_in/models/genre_model.dart';
 import 'package:komik_in/models/chapter_model.dart';
-import 'package:komik_in/models/chapter_pages_model.dart'; // <-- IMPOR UNTUK HALAMAN CHAPTER
+import 'package:komik_in/models/chapter_pages_model.dart'; 
 
 class ApiService {
   // Menggunakan URL yang sudah Anda konfirmasi berfungsi

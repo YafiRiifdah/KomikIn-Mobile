@@ -8,11 +8,7 @@ class ComicCard extends StatelessWidget {
   final Comic comic; // Gunakan model Comic yang baru
   final VoidCallback? onTap;
 
-  const ComicCard({
-    super.key,
-    required this.comic,
-    this.onTap,
-  });
+  const ComicCard({super.key, required this.comic, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +25,19 @@ class ComicCard extends StatelessWidget {
                 aspectRatio: 16 / 9, // Atau sesuaikan dengan rasio gambar Anda
                 child: CachedNetworkImage(
                   imageUrl: comic.coverUrl, // Gunakan coverUrl dari model baru
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                  ),
+                  placeholder:
+                      (context, url) => Container(
+                        color: Colors.grey[300],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                  errorWidget:
+                      (context, url, error) => Container(
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.broken_image,
+                          color: Colors.grey,
+                        ),
+                      ),
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
@@ -61,7 +62,10 @@ class ComicCard extends StatelessWidget {
                       ),
                       Text(
                         comic.author, // Gunakan author dari model baru
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -73,14 +77,21 @@ class ComicCard extends StatelessWidget {
                 // atau menampilkannya secara berbeda.
                 // Untuk saat ini, kita bisa tampilkan statusnya.
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.blueGrey[100],
-                    borderRadius: BorderRadius.circular(4)
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     comic.status,
-                    style: TextStyle(color: Colors.blueGrey[700], fontSize: 10, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      color: Colors.blueGrey[700],
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
