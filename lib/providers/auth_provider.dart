@@ -1,7 +1,8 @@
-// lib/providers/auth_provider.dart - Navigate ke main_screen
+// lib/providers/auth_provider.dart - Updated with Profile Image Support
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 enum AuthStatus { 
   uninitialized, 
@@ -12,12 +13,14 @@ enum AuthStatus {
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
+  final ApiService _apiService = ApiService();
   
   AuthStatus _status = AuthStatus.uninitialized;
   String? _token;
   String? _userEmail;
   String? _username;
   String? _userId;
+  String? _profileImageUrl; // BARU: Profile image URL
   String? _errorMessage;
 
   // Getters
@@ -26,6 +29,7 @@ class AuthProvider with ChangeNotifier {
   String? get userEmail => _userEmail;
   String? get username => _username;
   String? get userId => _userId;
+  String? get profileImageUrl => _profileImageUrl; // BARU: Getter untuk profile image
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _status == AuthStatus.authenticated && _token != null;
   bool get isLoading => _status == AuthStatus.loading;
@@ -54,12 +58,14 @@ class AuthProvider with ChangeNotifier {
       final savedEmail = prefs.getString('user_email');
       final savedUsername = prefs.getString('username');
       final savedUserId = prefs.getString('user_id');
+      final savedProfileImageUrl = prefs.getString('profile_image_url'); // BARU
 
       if (savedToken != null && savedToken.isNotEmpty) {
         _token = savedToken;
         _userEmail = savedEmail;
         _username = savedUsername;
         _userId = savedUserId;
+        _profileImageUrl = savedProfileImageUrl; // BARU
         _status = AuthStatus.authenticated;
         print('[AuthProvider] User restored from storage: $_userEmail');
       } else {
@@ -72,6 +78,84 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();
+  }
+
+  // BARU: Update Profile Method
+  Future<bool> updateProfile({
+    String? username,
+    String? profileImageUrl,
+  }) async {
+    if (_token == null) {
+      _setErrorWithoutLogout('Token tidak tersedia. Silakan login kembali.');
+      return false;
+    }
+
+    try {
+      // TIDAK ubah status loading untuk update profile - biar tidak trigger listener
+      print('[AuthProvider] Updating profile...');
+      print('[AuthProvider] Current data before update:');
+      print('[AuthProvider] - Username: $_username');
+      print('[AuthProvider] - Email: $_userEmail');
+      print('[AuthProvider] - Status: $_status');
+      print('[AuthProvider] - IsAuthenticated: $isAuthenticated');
+
+      _clearError(); // Clear any previous errors
+
+      // Call API Service
+      final response = await _apiService.updateProfile(
+        token: _token!,
+        username: username,
+        profileImageUrl: profileImageUrl,
+      );
+
+      print('[AuthProvider] Server response: $response');
+
+      // Update local user data
+      if (response['user'] != null) {
+        final userData = response['user'];
+        
+        // Update data dengan yang dari server
+        if (userData['username'] != null) {
+          _username = userData['username'];
+          print('[AuthProvider] Updated username to: $_username');
+        }
+        if (userData['profile_image_url'] != null) {
+          _profileImageUrl = userData['profile_image_url'];
+          print('[AuthProvider] Updated profile image');
+        }
+        if (userData['email'] != null) {
+          _userEmail = userData['email'];
+          print('[AuthProvider] Updated email to: $_userEmail');
+        }
+        if (userData['id'] != null) {
+          _userId = userData['id'].toString();
+          print('[AuthProvider] Updated user ID to: $_userId');
+        }
+
+        // PENTING: Save updated data to storage
+        await _saveToStorage();
+        print('[AuthProvider] Data saved to storage');
+
+        // PENTING: Pastikan status tetap authenticated - JANGAN UBAH STATUS
+        // _status tetap seperti sebelumnya
+        
+        print('[AuthProvider] Profile updated successfully');
+        print('[AuthProvider] Final auth status: $_status');
+        print('[AuthProvider] Final isAuthenticated: $isAuthenticated');
+        
+        // Notify listeners HANYA untuk update UI, bukan untuk auth status
+        notifyListeners();
+        return true;
+      } else {
+        _setErrorWithoutLogout('Server tidak mengirim data yang valid');
+        return false;
+      }
+    } catch (e) {
+      print('[AuthProvider] Update profile error: $e');
+      _handleUpdateProfileError(e);
+      return false;
+    }
+    // TIDAK ada finally block yang mengubah status
   }
 
   // Login function with detailed error handling
@@ -101,6 +185,7 @@ class AuthProvider with ChangeNotifier {
         _userEmail = response['user']['email'] ?? email;
         _username = response['user']['username'] ?? email.split('@')[0];
         _userId = response['user']['id']?.toString();
+        _profileImageUrl = response['user']['profile_image_url']; // BARU
 
         // Simpan ke storage
         await _saveToStorage();
@@ -268,7 +353,40 @@ class AuthProvider with ChangeNotifier {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  // ERROR HANDLING METHODS - Sesuai backend existing Anda
+  // ERROR HANDLING METHODS
+
+  void _handleUpdateProfileError(dynamic error) {
+    String errorString = error.toString().toLowerCase();
+    
+    if (errorString.contains('timeoutexception') || errorString.contains('timeout')) {
+      _setErrorWithoutLogout('Koneksi timeout. Periksa koneksi internet Anda dan coba lagi');
+      return;
+    }
+    
+    if (errorString.contains('socketexception') || 
+        errorString.contains('network') ||
+        errorString.contains('tidak dapat terhubung')) {
+      _setErrorWithoutLogout('Tidak dapat terhubung ke server. Periksa koneksi internet Anda');
+      return;
+    }
+
+    if (errorString.contains('401') || errorString.contains('unauthorized')) {
+      _setError('Sesi Anda telah berakhir. Silakan login kembali');
+      return;
+    }
+
+    if (errorString.contains('username sudah digunakan')) {
+      _setErrorWithoutLogout('Username sudah digunakan oleh user lain');
+      return;
+    }
+
+    if (errorString.contains('400') || errorString.contains('bad request')) {
+      _setErrorWithoutLogout('Data yang dikirim tidak valid. Periksa kembali isian Anda');
+      return;
+    }
+
+    _setErrorWithoutLogout('Gagal memperbarui profil. Coba lagi nanti');
+  }
 
   void _handleLoginError(dynamic error, String email) {
     String errorString = error.toString().toLowerCase();
@@ -377,6 +495,14 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // BARU: Set error tanpa logout (untuk update profile)
+  void _setErrorWithoutLogout(String error) {
+    _errorMessage = error;
+    // TIDAK mengubah status - tetap authenticated
+    print('[AuthProvider] Error (no logout): $error');
+    notifyListeners();
+  }
+
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
@@ -387,6 +513,7 @@ class AuthProvider with ChangeNotifier {
     _userEmail = null;
     _username = null;
     _userId = null;
+    _profileImageUrl = null; // BARU
   }
 
   Future<void> _saveToStorage() async {
@@ -395,6 +522,12 @@ class AuthProvider with ChangeNotifier {
     if (_userEmail != null) await prefs.setString('user_email', _userEmail!);
     if (_username != null) await prefs.setString('username', _username!);
     if (_userId != null) await prefs.setString('user_id', _userId!);
+    if (_profileImageUrl != null) {
+      await prefs.setString('profile_image_url', _profileImageUrl!);
+    } else {
+      await prefs.remove('profile_image_url'); // Remove jika null
+    }
+    print('[AuthProvider] Data saved to SharedPreferences');
   }
 
   Future<void> _clearStorage() async {
@@ -403,6 +536,7 @@ class AuthProvider with ChangeNotifier {
     await prefs.remove('user_email');
     await prefs.remove('username');
     await prefs.remove('user_id');
+    await prefs.remove('profile_image_url'); // BARU
   }
 
   // Debug method
@@ -412,6 +546,7 @@ class AuthProvider with ChangeNotifier {
     print('[AuthProvider] Is Authenticated: $isAuthenticated');
     print('[AuthProvider] Email: $_userEmail');
     print('[AuthProvider] Username: $_username');
+    print('[AuthProvider] Profile Image: $_profileImageUrl'); // BARU
     print('[AuthProvider] Error: $_errorMessage');
     print('[AuthProvider] ==================');
   }

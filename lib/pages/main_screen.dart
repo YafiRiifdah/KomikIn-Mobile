@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../widgets/bottom_navbar.dart';
+import 'package:komik_in/widgets/bottom_navbar.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
+import 'bookmark_screen.dart';
+import 'history_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -15,8 +17,8 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    Center(child: Text('Bookmark')), // Nanti ganti dengan BookmarkScreen()
-    Center(child: Text('History')),  // Nanti ganti dengan HistoryScreen()
+    const BookmarkScreen(),
+    const HistoryScreen(),
     const ProfileScreen(),
   ];
 

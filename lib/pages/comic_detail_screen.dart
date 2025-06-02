@@ -1,8 +1,10 @@
 // lib/pages/comic_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Add provider import
 import 'package:komik_in/models/comic_model.dart';
 import 'package:komik_in/models/chapter_model.dart';
 import 'package:komik_in/services/api_service.dart';
+import 'package:komik_in/providers/auth_provider.dart'; // Add AuthProvider import
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:komik_in/pages/read_screen.dart';
 
@@ -18,11 +20,158 @@ class ComicDetailScreen extends StatefulWidget {
 class _ComicDetailScreenState extends State<ComicDetailScreen> {
   final ApiService _apiService = ApiService();
   late Future<ChaptersResponse> _chaptersFuture;
+  
+  // Bookmark state variables
+  bool _isBookmarked = false;
+  bool _isCheckingBookmark = true;
+  bool _isBookmarkLoading = false;
 
   @override
   void initState() {
     super.initState();
     _chaptersFuture = _apiService.getMangaChapters(widget.comic.id, limit: 5000);
+    _checkBookmarkStatus();
+  }
+
+  // Check if comic is already bookmarked
+  Future<void> _checkBookmarkStatus() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.token == null) {
+      setState(() {
+        _isCheckingBookmark = false;
+        _isBookmarked = false;
+      });
+      return;
+    }
+
+    try {
+      print('[ComicDetail] Checking bookmark status for: ${widget.comic.id}');
+      
+      // Get first page of bookmarks to check if this comic is bookmarked
+      final response = await _apiService.getBookmarks(
+        token: authProvider.token!,
+        page: 1,
+        limit: 100, // Get more items to check
+      );
+
+      final bookmarks = response['data'] as List<dynamic>? ?? [];
+      final isBookmarked = bookmarks.any((bookmark) => 
+        bookmark['manga_id'] == widget.comic.id
+      );
+
+      if (mounted) {
+        setState(() {
+          _isBookmarked = isBookmarked;
+          _isCheckingBookmark = false;
+        });
+        
+        print('[ComicDetail] Bookmark status: $_isBookmarked');
+      }
+    } catch (e) {
+      print('[ComicDetail] Error checking bookmark status: $e');
+      if (mounted) {
+        setState(() {
+          _isCheckingBookmark = false;
+          _isBookmarked = false;
+        });
+      }
+    }
+  }
+
+  // Toggle bookmark status
+  Future<void> _toggleBookmark() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login to bookmark comics'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isBookmarkLoading = true;
+    });
+
+    try {
+      if (_isBookmarked) {
+        // Remove bookmark
+        print('[ComicDetail] Removing bookmark for: ${widget.comic.id}');
+        await _apiService.deleteBookmark(
+          token: authProvider.token!,
+          mangaId: widget.comic.id,
+        );
+        
+        if (mounted) {
+          setState(() {
+            _isBookmarked = false;
+            _isBookmarkLoading = false;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.bookmark_remove, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Removed "${widget.comic.title}" from bookmarks')),
+                ],
+              ),
+              backgroundColor: Colors.orange[600],
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        // Add bookmark
+        print('[ComicDetail] Adding bookmark for: ${widget.comic.id}');
+        await _apiService.addBookmark(
+          token: authProvider.token!,
+          mangaId: widget.comic.id,
+        );
+        
+        if (mounted) {
+          setState(() {
+            _isBookmarked = true;
+            _isBookmarkLoading = false;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.bookmark_add, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Added "${widget.comic.title}" to bookmarks')),
+                ],
+              ),
+              backgroundColor: Colors.green[600],
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('[ComicDetail] Error toggling bookmark: $e');
+      if (mounted) {
+        setState(() {
+          _isBookmarkLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to ${_isBookmarked ? 'remove' : 'add'} bookmark: ${e.toString()}'),
+            backgroundColor: Colors.red[600],
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -74,14 +223,28 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
                       ),
                     ),
                   ),
+                  
+                  // Top action buttons
                   Positioned(
                     top: 16,
                     left: 16,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
-                      onPressed: () => Navigator.pop(context),
+                    right: 16,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Back button
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        
+                        // Bookmark button
+                        _buildBookmarkButton(),
+                      ],
                     ),
                   ),
+                  
+                  // Title at bottom
                   Positioned(
                     bottom: 20,
                     left: 16,
@@ -205,6 +368,58 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Build bookmark button with different states
+  Widget _buildBookmarkButton() {
+    if (_isCheckingBookmark) {
+      return Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.3),
+          shape: BoxShape.circle,
+        ),
+        child: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _isBookmarkLoading ? null : _toggleBookmark,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _isBookmarked 
+              ? Colors.orange[600]?.withOpacity(0.9)
+              : Colors.black.withOpacity(0.3),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: _isBookmarkLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(
+                _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                color: Colors.white,
+                size: 24,
+              ),
       ),
     );
   }

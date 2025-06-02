@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:komik_in/providers/auth_provider.dart';
 import 'package:komik_in/widgets/comic_card.dart';
 import 'package:komik_in/widgets/search_filter.dart';
 import 'package:komik_in/pages/comic_detail_screen.dart';
@@ -476,6 +479,141 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Helper method untuk mendapatkan display name user
+  String _getUserDisplayName(AuthProvider authProvider) {
+    // Prioritas: username -> email -> fallback "User"
+    if (authProvider.username != null && authProvider.username!.isNotEmpty) {
+      return authProvider.username!;
+    }
+    
+    if (authProvider.userEmail != null && authProvider.userEmail!.isNotEmpty) {
+      // Ambil bagian sebelum @ dari email
+      final emailParts = authProvider.userEmail!.split('@');
+      return emailParts.isNotEmpty ? emailParts[0] : 'User';
+    }
+    
+    return 'User';
+  }
+
+  // Profile section dengan data dinamis dari AuthProvider
+  Widget _buildProfileSection() {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final displayName = _getUserDisplayName(authProvider);
+        
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: authProvider.profileImageUrl != null && 
+                                  authProvider.profileImageUrl!.isNotEmpty
+                      ? MemoryImage(
+                          base64Decode(
+                            authProvider.profileImageUrl!.split(',')[1], // Remove data:image/jpeg;base64,
+                          ),
+                        )
+                      : const AssetImage('assets/images/profile.png') as ImageProvider,
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Stay trending!',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.settings),
+              onSelected: (value) async {
+                if (value == 'logout') {
+                  // Tampilkan konfirmasi logout
+                  final shouldLogout = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Konfirmasi'),
+                      content: const Text('Apakah Anda yakin ingin keluar?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Batal'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Keluar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  
+                  if (shouldLogout == true) {
+                    await authProvider.logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/login', 
+                        (route) => false,
+                      );
+                    }
+                  }
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Profile (${displayName})'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings, size: 20),
+                      SizedBox(width: 8),
+                      Text('Settings'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 20, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Logout', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -487,48 +625,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Profile Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 24,
-                          backgroundImage: AssetImage(
-                            'assets/images/profile.png',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Stay trending!',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              'Alfani',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        /* TODO: Aksi ke halaman settings/profile */
-                      },
-                    ),
-                  ],
-                ),
+                // Profile Section - Menggunakan widget terpisah dengan data dinamis
+                _buildProfileSection(),
                 const SizedBox(height: 20),
 
                 // Search Bar

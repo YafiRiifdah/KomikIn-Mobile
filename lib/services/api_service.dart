@@ -1,4 +1,4 @@
-// lib/services/api_service.dart
+// lib/services/api_service.dart - Updated with Bookmark Methods
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -14,29 +14,242 @@ class ApiService {
   // Menggunakan URL yang sudah Anda konfirmasi berfungsi
   static const String _baseUrl = 'https://api.tascaid.space/api';
 
-  /*
-  // Opsi getBaseUrl yang lebih dinamis jika Anda kembali ke development lokal nanti
-  static String getBaseUrl() {
-    const String port = "8081"; // GANTI JIKA PORT BACKEND LOKAL ANDA BERBEDA
-    if (kIsWeb) {
-      return 'http://localhost:$port/api';
-    } else {
-      try {
-        if (Platform.isAndroid) {
-           return 'http://10.0.2.2:$port/api'; // Untuk emulator Android
-        } else if (Platform.isIOS) {
-           return 'http://localhost:$port/api'; // Untuk simulator iOS
-        }
-      } catch (e) {
-         // Platform.isAndroid/isIOS akan error di web, ini fallback
-         print("Platform check error (expected on web if not web build): $e");
+  // HISTORY METHODS - BARU
+
+  // Get user reading history with pagination
+  Future<Map<String, dynamic>> getHistory({
+    required String token,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/user/history?page=$page&limit=$limit');
+    
+    print('[ApiService.getHistory] Fetching from: $uri');
+    
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      print('[ApiService.getHistory] Response status: ${response.statusCode}');
+      print('[ApiService.getHistory] Response body: ${response.body}');
+
+      final decodedResponse = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return decodedResponse;
+      } else {
+        final errorMessage = decodedResponse['message'] ?? 'Failed to get history';
+        throw Exception(errorMessage);
       }
-      // Default untuk device fisik, GANTI 'IP_LOKAL_KOMPUTER_ANDA'
-      return 'http://IP_LOKAL_KOMPUTER_ANDA:$port/api'; 
+    } catch (e) {
+      print('[ApiService.getHistory] Error: $e');
+      rethrow;
     }
   }
-  static final String _baseUrlDynamic = getBaseUrl(); // Jika Anda menggunakan getBaseUrl()
-  */
+
+  // Add or update reading history
+  Future<Map<String, dynamic>> addHistory({
+    required String token,
+    required String mangaId,
+    required String chapterId,
+    int lastPage = 0,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/user/history');
+    
+    print('[ApiService.addHistory] Adding history for manga: $mangaId, chapter: $chapterId, page: $lastPage');
+    
+    try {
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'mangaId': mangaId,
+          'chapterId': chapterId,
+          'lastPage': lastPage,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      print('[ApiService.addHistory] Response status: ${response.statusCode}');
+      print('[ApiService.addHistory] Response body: ${response.body}');
+
+      final decodedResponse = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return decodedResponse;
+      } else {
+        final errorMessage = decodedResponse['message'] ?? 'Failed to add history';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('[ApiService.addHistory] Error: $e');
+      rethrow;
+    }
+  }
+
+  // BOOKMARK METHODS
+
+  // Get user bookmarks with pagination
+  Future<Map<String, dynamic>> getBookmarks({
+    required String token,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/user/bookmarks?page=$page&limit=$limit');
+    
+    print('[ApiService.getBookmarks] Fetching from: $uri');
+    
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 20));
+
+      print('[ApiService.getBookmarks] Response status: ${response.statusCode}');
+      print('[ApiService.getBookmarks] Response body: ${response.body}');
+
+      final decodedResponse = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return decodedResponse;
+      } else {
+        final errorMessage = decodedResponse['message'] ?? 'Failed to get bookmarks';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('[ApiService.getBookmarks] Error: $e');
+      rethrow;
+    }
+  }
+
+  // Add bookmark
+  Future<Map<String, dynamic>> addBookmark({
+    required String token,
+    required String mangaId,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/user/bookmarks');
+    
+    print('[ApiService.addBookmark] Adding bookmark for manga: $mangaId');
+    
+    try {
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'mangaId': mangaId,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      print('[ApiService.addBookmark] Response status: ${response.statusCode}');
+      print('[ApiService.addBookmark] Response body: ${response.body}');
+
+      final decodedResponse = jsonDecode(response.body);
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return decodedResponse;
+      } else {
+        final errorMessage = decodedResponse['message'] ?? 'Failed to add bookmark';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('[ApiService.addBookmark] Error: $e');
+      rethrow;
+    }
+  }
+
+  // Delete bookmark
+  Future<Map<String, dynamic>> deleteBookmark({
+    required String token,
+    required String mangaId,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/user/bookmarks/$mangaId');
+    
+    print('[ApiService.deleteBookmark] Deleting bookmark for manga: $mangaId');
+    
+    try {
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      print('[ApiService.deleteBookmark] Response status: ${response.statusCode}');
+      print('[ApiService.deleteBookmark] Response body: ${response.body}');
+
+      final decodedResponse = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return decodedResponse;
+      } else {
+        final errorMessage = decodedResponse['message'] ?? 'Failed to delete bookmark';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('[ApiService.deleteBookmark] Error: $e');
+      rethrow;
+    }
+  }
+
+  // PROFILE UPDATE METHOD
+  Future<Map<String, dynamic>> updateProfile({
+    required String token,
+    String? username,
+    String? profileImageUrl,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/user/profile');
+    
+    final Map<String, dynamic> requestBody = {};
+    if (username != null && username.trim().isNotEmpty) {
+      requestBody['username'] = username.trim();
+    }
+    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+      requestBody['profile_image_url'] = profileImageUrl;
+    }
+
+    print('[ApiService.updateProfile] Endpoint: $uri');
+    print('[ApiService.updateProfile] Request body: $requestBody');
+    
+    try {
+      final response = await http.patch(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      ).timeout(const Duration(seconds: 30));
+
+      print('[ApiService.updateProfile] Response status: ${response.statusCode}');
+      print('[ApiService.updateProfile] Response body: ${response.body}');
+
+      final decodedResponse = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return decodedResponse;
+      } else {
+        final errorMessage = decodedResponse['message'] ?? 'Failed to update profile';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('[ApiService.updateProfile] Error: $e');
+      rethrow;
+    }
+  }
 
   Future<PaginatedComicsResponse> getLatestComics({int page = 1, int limit = 10}) async {
     final uri = Uri.parse('$_baseUrl/manga/latest?page=$page&limit=$limit');
@@ -57,7 +270,7 @@ class ApiService {
       }
     } catch (e) {
       print('[ApiService.getLatestComics] Error: $e');
-      rethrow; // Lempar ulang error agar bisa ditangani di UI
+      rethrow;
     }
   }
 
@@ -134,14 +347,13 @@ class ApiService {
     }
   }
 
-  // Fungsi BARU untuk mengambil halaman chapter
   Future<ChapterPagesData> getPagesForChapter(String chapterId) async {
     final uri = Uri.parse('$_baseUrl/chapters/$chapterId/pages');
     print('[ApiService.getPagesForChapter] Fetching from: $uri');
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 25)); // Timeout bisa disesuaikan
+      final response = await http.get(uri).timeout(const Duration(seconds: 25));
         print('[ApiService.getPagesForChapter] Response Status Code: ${response.statusCode}');
-      print('[ApiService.getPagesForChapter] Response Body RAW: ${response.body}'); // <-- LOG INI PENTING
+      print('[ApiService.getPagesForChapter] Response Body RAW: ${response.body}');
       if (response.statusCode == 200) {
         final decodedJson = jsonDecode(response.body);
         if (decodedJson is Map<String, dynamic>) {
@@ -183,7 +395,6 @@ class ApiService {
     }
   }
 
-  // FITUR BARU: Search by title only
   Future<PaginatedComicsResponse> searchComicsByTitle(String title, {int page = 1, int limit = 10}) async {
     final uri = Uri.parse('$_baseUrl/manga/search/title?title=${Uri.encodeComponent(title)}&page=$page&limit=$limit');
     print('[ApiService.searchComicsByTitle] Fetching from: $uri');
@@ -207,7 +418,6 @@ class ApiService {
     }
   }
 
-  // FITUR BARU: Search by title AND genre (combined)
   Future<PaginatedComicsResponse> searchComicsByTitleAndGenre(
     String title, 
     String genreId, 
