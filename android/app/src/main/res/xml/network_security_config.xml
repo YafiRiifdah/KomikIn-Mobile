@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic for development and APIs -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">api.tascaid.space</domain>
+        <domain includeSubdomains="true">uploads.mangadex.org</domain>
+        <domain includeSubdomains="true">cmdxd98sb0x3yprd.mangadex.network</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">192.168.1.1</domain>
+    </domain-config>
+    
+    <!-- Trust user added CAs for debugging -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user"/>
+            <certificates src="system"/>
+        </trust-anchors>
+    </debug-overrides>
+    
+    <!-- Base configuration for all domains not covered above -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

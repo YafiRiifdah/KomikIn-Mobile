@@ -1,10 +1,13 @@
-// lib/pages/read_screen.dart
+// lib/pages/read_screen.dart - Updated dengan History Save
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
 import 'package:komik_in/models/chapter_pages_model.dart';
 import 'package:komik_in/services/api_service.dart';
-import 'package:komik_in/models/chapter_model.dart'; // Impor model Chapter
+import 'package:komik_in/models/chapter_model.dart';
+import 'package:komik_in/providers/auth_provider.dart';
 
 enum ReadingMode {
   singlePageHorizontal,
@@ -18,6 +21,8 @@ class ReadScreen extends StatefulWidget {
   final String? mangaId; 
   final List<Chapter>? allChapters; 
   final int? currentChapterIndex;
+  // Parameter baru untuk continue dari history
+  final int? startPage; // Page terakhir yang dibaca dari history
 
   const ReadScreen({
     super.key,
@@ -26,6 +31,7 @@ class ReadScreen extends StatefulWidget {
     this.mangaId,
     this.allChapters,
     this.currentChapterIndex,
+    this.startPage, // Added untuk history continuation
   });
 
   @override
@@ -56,6 +62,14 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
   late AnimationController _controlsAnimationController;
   late Animation<double> _controlsAnimation;
 
+  // History tracking
+  Timer? _historySaveTimer;
+  bool _isHistorySaved = false;
+  int _lastSavedPage = -1;
+  
+  // Cache AuthProvider untuk avoid context access di dispose
+  AuthProvider? _authProvider;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +90,13 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
     _initializeChapterNavigation();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cache AuthProvider reference untuk avoid context access di dispose
+    _authProvider = Provider.of<AuthProvider>(context, listen: false);
+  }
+
   void _pageViewListener() {
     if (_pageController.hasClients && _pageController.page != null && !_isSliderInteracting) {
       final newPage = _pageController.page!.round();
@@ -86,16 +107,93 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
             _sliderValue = newPage.toDouble();
           });
         }
-        // TODO: Update history (lastPage: _currentPageIndex + 1)
-        // Anda memerlukan mangaId dan token di sini
-        // _apiService.addOrUpdateHistory(token, widget.mangaId!, widget.chapterId, _currentPageIndex + 1);
+        
+        // Save history dengan debounce
+        _saveHistoryWithDebounce();
+        
         print('Halaman saat ini (listener PageView): ${_currentPageIndex + 1}');
       }
     }
   }
 
+  // Method untuk save history dengan debounce
+  void _saveHistoryWithDebounce() {
+    // Cancel timer sebelumnya jika ada
+    _historySaveTimer?.cancel();
+    
+    // Set timer baru dengan delay 2 detik
+    _historySaveTimer = Timer(const Duration(seconds: 2), () {
+      _saveHistory();
+    });
+  }
+
+  // Method untuk save history
+  Future<void> _saveHistory() async {
+    // Cek apakah sudah pernah save di page yang sama
+    if (_lastSavedPage == _currentPageIndex || widget.mangaId == null) {
+      return;
+    }
+
+    if (_authProvider?.token == null) {
+      print('[ReadScreen] No token available for saving history');
+      return;
+    }
+
+    try {
+      print('[ReadScreen] Saving history: Page ${_currentPageIndex + 1}/${_totalPages}');
+      
+      await _apiService.addHistory(
+        token: _authProvider!.token!,
+        mangaId: widget.mangaId!,
+        chapterId: widget.chapterId,
+        lastPage: _currentPageIndex,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _isHistorySaved = true;
+          _lastSavedPage = _currentPageIndex;
+        });
+      }
+      
+      print('[ReadScreen] History saved successfully: Page ${_currentPageIndex + 1}');
+    } catch (e) {
+      print('[ReadScreen] Failed to save history: $e');
+      // Don't show error to user, just log it
+    }
+  }
+
+  // Method untuk force save history (dipanggil saat dispose/pindah chapter)
+  Future<void> _forceSaveHistory() async {
+    if (widget.mangaId == null || _authProvider?.token == null) return;
+
+    try {
+      await _apiService.addHistory(
+        token: _authProvider!.token!,
+        mangaId: widget.mangaId!,
+        chapterId: widget.chapterId,
+        lastPage: _currentPageIndex,
+      );
+      
+      print('[ReadScreen] Force saved history: Page ${_currentPageIndex + 1}');
+    } catch (e) {
+      print('[ReadScreen] Failed to force save history: $e');
+    }
+  }
+
   @override
   void dispose() {
+    // Cancel timer terlebih dahulu
+    _historySaveTimer?.cancel();
+    
+    // Save history menggunakan cached AuthProvider (no context access)
+    if (widget.mangaId != null && _authProvider?.token != null) {
+      // Fire and forget - no await to avoid blocking dispose
+      _forceSaveHistory().catchError((e) {
+        print('[ReadScreen] Error in dispose force save: $e');
+      });
+    }
+    
     _pageController.removeListener(_pageViewListener);
     _pageController.dispose();
     _controlsAnimationController.dispose();
@@ -111,7 +209,9 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
         _totalPages = 0;
         _currentPageIndex = 0;
         _sliderValue = 0;
-        _isLoadingNewChapter = false; // Pastikan ini juga direset
+        _isLoadingNewChapter = false;
+        _isHistorySaved = false;
+        _lastSavedPage = -1;
         _pagesFuture = _apiService.getPagesForChapter(widget.chapterId);
       });
     }
@@ -125,13 +225,32 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
            setState(() {
             _imageUrls = urls;
             _totalPages = _imageUrls.length;
-            if (_currentPageIndex >= _totalPages && _totalPages > 0) {
+            
+            // Set initial page dari history jika ada
+            if (widget.startPage != null && widget.startPage! < _totalPages) {
+              _currentPageIndex = widget.startPage!;
+            } else if (_currentPageIndex >= _totalPages && _totalPages > 0) {
                 _currentPageIndex = _totalPages -1;
             } else if (_totalPages == 0) {
                 _currentPageIndex = 0;
             }
+            
             _sliderValue = _currentPageIndex.toDouble(); 
           });
+          
+          // Navigate ke page yang sesuai jika ada startPage
+          if (widget.startPage != null && widget.startPage! < _totalPages && _totalPages > 0) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _pageController.hasClients) {
+                _pageController.jumpToPage(widget.startPage!);
+              }
+            });
+          }
+          
+          // Save history untuk page pertama setelah load
+          if (_totalPages > 0) {
+            _saveHistoryWithDebounce();
+          }
         }
       }
     });
@@ -174,7 +293,7 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToChapter(bool next) async {
-    if (_isLoadingNewChapter) return;
+    if (_isLoadingNewChapter || !mounted) return;
     
     if (widget.allChapters == null || widget.currentChapterIndex == null || widget.mangaId == null) {
       _showSnackBar('Informasi navigasi chapter tidak lengkap.');
@@ -198,8 +317,15 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
 
     if (mounted) setState(() => _isLoadingNewChapter = true);
 
+    // Save history sebelum pindah chapter (dengan mounted check)
+    if (mounted) {
+      await _forceSaveHistory();
+    }
+
     try {
       final targetChapter = widget.allChapters![targetIndex]; 
+      
+      if (!mounted) return;
       
       // Menggunakan pushReplacement agar tidak menumpuk halaman ReadScreen di stack navigasi
       Navigator.of(context).pushReplacement(
@@ -229,7 +355,6 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
       if (mounted) setState(() => _isLoadingNewChapter = false);
       _showSnackBar('Error memuat chapter baru: $e');
     }
-    // _isLoadingNewChapter akan di-reset di initState halaman ReadScreen yang baru
   }
 
   String _getChapterTitle(Chapter chapterData) {
@@ -401,6 +526,9 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
       return;
     }
 
+    // Save history sebelum membuka chapter list
+    _forceSaveHistory();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -515,8 +643,11 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
                                   color: Colors.grey[500],
                                   size: 16,
                                 ),
-                          onTap: isCurrentChapter ? null : () {
+                          onTap: isCurrentChapter ? null : () async {
                             Navigator.pop(context); // Close bottom sheet first
+                            
+                            // Save history sebelum pindah chapter
+                            await _forceSaveHistory();
                             
                             // Navigate to selected chapter
                             Navigator.of(context).pushReplacement(
@@ -564,7 +695,7 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10), // Sesuaikan padding
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         decoration: BoxDecoration(
           color: isSelected ? Colors.blue[700] : Colors.grey[800],
           borderRadius: BorderRadius.circular(12),
@@ -593,10 +724,10 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 44, height: 44, // Sedikit lebih besar
+            width: 44, height: 44,
             decoration: BoxDecoration(
               color: color,
-              shape: BoxShape.circle, // Bulat
+              shape: BoxShape.circle,
               border: Border.all(
                 color: isSelected ? Colors.blueAccent[100]! : (color == Colors.white ? Colors.grey[500]! : Colors.transparent),
                 width: isSelected ? 3 : 1.5,
@@ -620,7 +751,7 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
 
   Widget _buildLoadingIndicator() {
     return Container(
-      color: _backgroundColor, // Gunakan warna latar belakang yang dipilih
+      color: _backgroundColor,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -672,7 +803,7 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
 
   Widget _buildImagePlaceholder() {
     return Container(
-      color: _backgroundColor.withOpacity(0.5), // Placeholder sedikit transparan dari background
+      color: _backgroundColor.withOpacity(0.5),
       child: Center(
         child: SizedBox(
           width: 30, height: 30,
@@ -773,13 +904,25 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
       backgroundColor: _backgroundColor,
       extendBodyBehindAppBar: true,
       appBar: _showControls ? PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight + 10), // Sedikit ruang untuk gradient
+        preferredSize: const Size.fromHeight(kToolbarHeight + 10),
         child: SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, -1.5), end: Offset.zero).animate(_controlsAnimation),
           child: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                // Save history sebelum keluar dengan safe context access
+                if (mounted && widget.mangaId != null && _authProvider?.token != null) {
+                  _forceSaveHistory().then((_) {
+                    if (mounted) Navigator.of(context).pop();
+                  }).catchError((e) {
+                    print('[ReadScreen] Error saving history on back: $e');
+                    if (mounted) Navigator.of(context).pop();
+                  });
+                } else {
+                  if (mounted) Navigator.of(context).pop();
+                }
+              },
               tooltip: 'Kembali',
             ),
             title: Column(
@@ -835,7 +978,7 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
               if (_currentReadingMode == ReadingMode.singlePageHorizontal && 
                   widget.allChapters != null && 
                   widget.currentChapterIndex != null && 
-                  _totalPages > 0) { // Pastikan ada halaman untuk di-swipe
+                  _totalPages > 0) {
                 if (_currentPageIndex == 0 && details.primaryVelocity! > 300 && _hasPreviousChapter) {
                   _navigateToChapter(false);
                 } else if (_currentPageIndex == _totalPages - 1 && details.primaryVelocity! < -300 && _hasNextChapter) {
@@ -898,13 +1041,13 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 12.0), // Sesuaikan padding
+              padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 12.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_currentReadingMode == ReadingMode.singlePageHorizontal) ...[
                     Container(
-                      height: 40, // Tinggi eksplisit untuk baris slider
+                      height: 40,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.5),
@@ -952,7 +1095,7 @@ class _ReadScreenState extends State<ReadScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 8), 
                   ],
                   Container(
-                    height: 50, // Tinggi eksplisit untuk baris tombol
+                    height: 50,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                      decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.5),

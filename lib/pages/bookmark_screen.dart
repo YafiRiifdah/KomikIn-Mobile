@@ -1,4 +1,4 @@
-// lib/pages/bookmark_screen.dart - Clean Production Version
+// lib/pages/bookmark_screen.dart - Fixed Navigation Version
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:komik_in/providers/auth_provider.dart';
@@ -6,6 +6,7 @@ import 'package:komik_in/services/api_service.dart';
 import 'package:komik_in/models/bookmark_model.dart';
 import 'package:komik_in/models/comic_model.dart';
 import 'package:komik_in/pages/comic_detail_screen.dart';
+import 'package:komik_in/pages/main_screen.dart';
 
 class BookmarkScreen extends StatefulWidget {
   const BookmarkScreen({Key? key}) : super(key: key);
@@ -36,6 +37,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -55,6 +57,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   Future<void> _loadBookmarks() async {
+    if (!mounted) return;
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
     if (authProvider.token == null) {
@@ -74,6 +78,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         page: _currentPage,
         limit: _itemsPerPage,
       );
+
+      if (!mounted) return;
 
       if (response is Map<String, dynamic>) {
         final List<dynamic> bookmarkData = response['data'] as List<dynamic>? ?? [];
@@ -97,14 +103,12 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
           totalItems: paginationData['totalItems'] ?? bookmarks.length,
         );
 
-        if (mounted) {
-          setState(() {
-            _bookmarks = bookmarks;
-            _pagination = pagination;
-            _isLoading = false;
-            _hasError = false;
-          });
-        }
+        setState(() {
+          _bookmarks = bookmarks;
+          _pagination = pagination;
+          _isLoading = false;
+          _hasError = false;
+        });
       } else {
         throw Exception('Invalid response format: ${response.runtimeType}');
       }
@@ -117,6 +121,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   Future<void> _loadMoreBookmarks() async {
+    if (!mounted) return;
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
     if (authProvider.token == null || _isLoadingMore) return;
@@ -133,6 +139,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         page: nextPage,
         limit: _itemsPerPage,
       );
+
+      if (!mounted) return;
 
       if (response is Map<String, dynamic>) {
         final List<dynamic> bookmarkData = response['data'] as List<dynamic>? ?? [];
@@ -156,14 +164,12 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
           totalItems: paginationData['totalItems'] ?? 0,
         );
         
-        if (mounted) {
-          setState(() {
-            _bookmarks.addAll(newBookmarks);
-            _pagination = pagination;
-            _currentPage = nextPage;
-            _isLoadingMore = false;
-          });
-        }
+        setState(() {
+          _bookmarks.addAll(newBookmarks);
+          _pagination = pagination;
+          _currentPage = nextPage;
+          _isLoadingMore = false;
+        });
       } else {
         throw Exception('Invalid response format for load more');
       }
@@ -185,6 +191,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   Future<void> _deleteBookmark(Bookmark bookmark) async {
+    if (!mounted) return;
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
     if (authProvider.token == null) return;
@@ -228,6 +236,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   Future<void> _showDeleteConfirmation(Bookmark bookmark) async {
+    if (!mounted) return;
+    
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -253,12 +263,14 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
       ),
     );
 
-    if (shouldDelete == true) {
+    if (shouldDelete == true && mounted) {
       _deleteBookmark(bookmark);
     }
   }
 
   void _setError(String message) {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = false;
       _hasError = true;
@@ -267,6 +279,8 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   void _navigateToComicDetail(Bookmark bookmark) {
+    if (!mounted) return;
+    
     final comic = Comic(
       id: bookmark.mangaId,
       title: bookmark.title,
@@ -287,37 +301,65 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
     );
   }
 
+  // Safe navigation back method - Always go to main screen
+  void _handleBackPress() {
+    if (!mounted) return;
+    
+    // Direct navigation to MainScreen widget (most reliable)
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const MainScreen()),
+      (route) => false,
+    );
+  }
+
+  // Safe explore navigation method - Go to main screen
+  void _handleExplorePress() {
+    if (!mounted) return;
+    
+    // Direct navigation to MainScreen widget
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const MainScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'My Bookmarks',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          if (_bookmarks.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadBookmarks,
-              tooltip: 'Refresh',
+    return WillPopScope(
+      onWillPop: () async {
+        _handleBackPress();
+        return false; // Prevent default back behavior
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text(
+            'My Bookmarks',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
             ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadBookmarks,
-        child: _buildBody(),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: _handleBackPress,
+          ),
+          actions: [
+            if (_bookmarks.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _loadBookmarks,
+                tooltip: 'Refresh',
+              ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadBookmarks,
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -437,7 +479,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: _handleExplorePress,
               icon: const Icon(Icons.explore),
               label: const Text('Explore Comics'),
               style: ElevatedButton.styleFrom(

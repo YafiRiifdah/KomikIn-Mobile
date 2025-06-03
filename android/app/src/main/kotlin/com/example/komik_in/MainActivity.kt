@@ -1,4 +1,4 @@
-package com.example.komik_in
+package com.komik_in.app
 
 import io.flutter.embedding.android.FlutterActivity
 

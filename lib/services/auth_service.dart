@@ -5,26 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // Copy getBaseUrl logic from ApiService
-  static String getBaseUrl() {
-    const String port = "8081";
-    if (kIsWeb) {
-      return 'http://localhost:$port/api';
-    } else {
-      try {
-        if (Platform.isAndroid) {
-          return 'http://10.0.2.2:$port/api';
-        } else if (Platform.isIOS) {
-          return 'http://localhost:$port/api';
-        }
-      } catch (e) {
-        print("Platform check error: $e");
-      }
-      return 'https://api.tascaid.space/api';
-    }
-  }
 
-  static final String _baseUrl = getBaseUrl();
+  static final String _baseUrl = 'https://api.tascaid.space/api';
 
   // Auth methods - same as ApiService but in dedicated class
   Future<Map<String, dynamic>> loginUser({

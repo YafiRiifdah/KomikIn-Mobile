@@ -107,7 +107,7 @@ class AuthProvider with ChangeNotifier {
         username: username,
         profileImageUrl: profileImageUrl,
       );
-
+  
       print('[AuthProvider] Server response: $response');
 
       // Update local user data

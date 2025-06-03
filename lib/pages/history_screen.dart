@@ -1,4 +1,4 @@
-// lib/pages/history_screen.dart
+// lib/pages/history_screen.dart - Complete dengan Continue Reading
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:komik_in/providers/auth_provider.dart';
@@ -6,6 +6,8 @@ import 'package:komik_in/services/api_service.dart';
 import 'package:komik_in/models/history_model.dart';
 import 'package:komik_in/models/comic_model.dart';
 import 'package:komik_in/pages/comic_detail_screen.dart';
+import 'package:komik_in/pages/read_screen.dart';
+import 'package:komik_in/pages/main_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
@@ -36,6 +38,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -55,6 +58,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _loadHistory() async {
+    if (!mounted) return;
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
     if (authProvider.token == null) {
@@ -75,14 +80,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
         limit: _itemsPerPage,
       );
 
+      if (!mounted) return;
+
+      // DEBUG: Print response untuk lihat format
+      print('[HistoryScreen] DEBUG - Full Response: $response');
+      print('[HistoryScreen] DEBUG - Response Type: ${response.runtimeType}');
+      
       if (response is Map<String, dynamic>) {
         final List<dynamic> historyData = response['data'] as List<dynamic>? ?? [];
+        print('[HistoryScreen] DEBUG - History Data Length: ${historyData.length}');
 
         final List<History> histories = historyData.map<History>((item) {
+          print('[HistoryScreen] DEBUG - Mapping item: $item');
           return History(
             mangaId: item['manga_id']?.toString() ?? '',
             chapterId: item['chapter_id']?.toString() ?? '',
-            lastPage: item['last_page'] ?? 0,
+            lastPage: int.tryParse(item['last_page']?.toString() ?? '0') ?? 0,
             updatedAt: item['updated_at']?.toString() ?? '',
             mangaTitle: item['mangaTitle']?.toString() ?? 'N/A',
             mangaCoverUrl: item['mangaCoverUrl']?.toString(),
@@ -97,19 +110,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
           totalItems: paginationData['totalItems'] ?? histories.length,
         );
 
-        if (mounted) {
-          setState(() {
-            _histories = histories;
-            _pagination = pagination;
-            _isLoading = false;
-            _hasError = false;
-          });
+        print('[HistoryScreen] DEBUG - Parsed histories count: ${histories.length}');
+        for (var history in histories) {
+          print('[HistoryScreen] DEBUG - History: ${history.mangaTitle}');
         }
+
+        setState(() {
+          _histories = histories;
+          _pagination = pagination;
+          _isLoading = false;
+          _hasError = false;
+        });
       } else {
         throw Exception('Invalid response format: ${response.runtimeType}');
       }
 
     } catch (e) {
+      print('[HistoryScreen] ERROR - Failed to load history: $e');
       if (mounted) {
         _setError('Failed to load reading history: ${e.toString()}');
       }
@@ -117,6 +134,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _loadMoreHistory() async {
+    if (!mounted) return;
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
     if (authProvider.token == null || _isLoadingMore) return;
@@ -134,6 +153,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         limit: _itemsPerPage,
       );
 
+      if (!mounted) return;
+
       if (response is Map<String, dynamic>) {
         final List<dynamic> historyData = response['data'] as List<dynamic>? ?? [];
 
@@ -141,7 +162,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           return History(
             mangaId: item['manga_id']?.toString() ?? '',
             chapterId: item['chapter_id']?.toString() ?? '',
-            lastPage: item['last_page'] ?? 0,
+            lastPage: int.tryParse(item['last_page']?.toString() ?? '0') ?? 0,
             updatedAt: item['updated_at']?.toString() ?? '',
             mangaTitle: item['mangaTitle']?.toString() ?? 'N/A',
             mangaCoverUrl: item['mangaCoverUrl']?.toString(),
@@ -156,14 +177,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
           totalItems: paginationData['totalItems'] ?? 0,
         );
         
-        if (mounted) {
-          setState(() {
-            _histories.addAll(newHistories);
-            _pagination = pagination;
-            _currentPage = nextPage;
-            _isLoadingMore = false;
-          });
-        }
+        setState(() {
+          _histories.addAll(newHistories);
+          _pagination = pagination;
+          _currentPage = nextPage;
+          _isLoadingMore = false;
+        });
       } else {
         throw Exception('Invalid response format for load more');
       }
@@ -185,6 +204,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _setError(String message) {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = false;
       _hasError = true;
@@ -193,6 +214,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _navigateToComicDetail(History history) {
+    if (!mounted) return;
+    
     final comic = Comic(
       id: history.mangaId,
       title: history.mangaTitle,
@@ -213,37 +236,88 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  // Continue reading functionality
+  void _continueReading(History history) {
+    if (!mounted) return;
+    
+    print('[HistoryScreen] Continue reading: ${history.mangaTitle}');
+    print('[HistoryScreen] Chapter ID: ${history.chapterId}');
+    print('[HistoryScreen] Last page: ${history.lastPage}');
+    
+    // Navigate to chapter reader
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReadScreen(
+          chapterId: history.chapterId,
+          chapterTitle: '${history.mangaTitle} - Continue Reading',
+          mangaId: history.mangaId,
+          // Note: allChapters dan currentChapterIndex tidak tersedia dari history
+          // ReadScreen akan start dari page yang disimpan di history
+        ),
+      ),
+    );
+  }
+
+  // Safe navigation back method - Always go to main screen
+  void _handleBackPress() {
+    if (!mounted) return;
+    
+    // Direct navigation to MainScreen widget (most reliable)
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const MainScreen()),
+      (route) => false,
+    );
+  }
+
+  // Safe explore navigation method - Go to main screen
+  void _handleExplorePress() {
+    if (!mounted) return;
+    
+    // Direct navigation to MainScreen widget
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const MainScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'Reading History',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          if (_histories.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadHistory,
-              tooltip: 'Refresh',
+    return WillPopScope(
+      onWillPop: () async {
+        _handleBackPress();
+        return false; // Prevent default back behavior
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text(
+            'Reading History',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
             ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadHistory,
-        child: _buildBody(),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: _handleBackPress,
+          ),
+          actions: [
+            if (_histories.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _loadHistory,
+                tooltip: 'Refresh',
+              ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadHistory,
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -363,7 +437,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: _handleExplorePress,
               icon: const Icon(Icons.explore),
               label: const Text('Explore Comics'),
               style: ElevatedButton.styleFrom(
@@ -507,7 +581,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Last read: Page ${history.lastPage}',
+                      'Last read: Page ${history.lastPage + 1}',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.blue[600],
@@ -515,7 +589,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    // FIXED: Simplified layout to prevent overflow
+                    // Status badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -546,33 +620,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
               
               const SizedBox(width: 8),
               
-              // Continue reading button - FIXED: More compact design
-              Container(
-                width: 50,
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.play_arrow,
-                      size: 14,
-                      color: Colors.blue[600],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Read',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
+              // Continue reading button - UPDATED: Added onTap functionality
+              InkWell(
+                onTap: () => _continueReading(history),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 50,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.play_arrow,
+                        size: 14,
                         color: Colors.blue[600],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Read',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
