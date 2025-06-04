@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:komik_in/providers/auth_provider.dart';
 import 'package:komik_in/pages/signup_screen.dart';
+import 'package:komik_in/pages/change_password_screen.dart';
 import 'pages/splash_screen.dart';
 import 'pages/login_screen.dart';
 import 'pages/main_screen.dart';
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/main': (context) => const AuthProtectedMainScreen(),
           '/signup': (context) => const SignUpScreen(),
+          '/change-password': (context) => const ChangePasswordScreen(),
         },
       ),
     );

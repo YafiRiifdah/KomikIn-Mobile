@@ -1,4 +1,4 @@
-// lib/pages/login_screen.dart - Simple version, fixed overflow
+// lib/pages/login_screen.dart - Updated with reset password navigation
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:komik_in/providers/auth_provider.dart';
@@ -207,17 +207,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         
                         const SizedBox(height: 16),
                         
-                        // Forgot password (centered, no overflow)
+                        // Forgot password - UPDATED: Navigate to ChangePasswordScreen
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: authProvider.isLoading ? null : () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Password reset feature coming soon'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              Navigator.pushNamed(context, '/change-password');
                             },
                             child: const Text('Forgot Password?'),
                           ),
