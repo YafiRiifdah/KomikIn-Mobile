@@ -553,135 +553,137 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   }
 
   Widget _buildBookmarkCard(Bookmark bookmark) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _navigateToComicDetail(bookmark),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Cover image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: 60,
-                  height: 80,
-                  color: Colors.grey[200],
-                  child: bookmark.coverUrl != null && bookmark.coverUrl!.isNotEmpty
-                      ? Image.network(
-                          bookmark.coverUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: Colors.grey[600],
-                                size: 24,
-                              ),
-                            );
-                          },
-                        )
-                      : Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey[600],
-                          size: 24,
-                        ),
-                ),
-              ),
-              
-              const SizedBox(width: 12),
-              
-              // Comic info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      bookmark.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Author: ${bookmark.author}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(bookmark.status).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            bookmark.status,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: _getStatusColor(bookmark.status),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: InkWell(
+      onTap: () => _navigateToComicDetail(bookmark),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Cover image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 60,
+                height: 80,
+                color: Colors.grey[200],
+                child: bookmark.coverUrl != null && bookmark.coverUrl!.isNotEmpty
+                    ? Image.network(
+                        bookmark.coverUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: Icon(
+                              Icons.image_not_supported,
+                              color: Colors.grey[600],
+                              size: 24,
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.access_time,
-                          size: 12,
+                          );
+                        },
+                      )
+                    : Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey[600],
+                        size: 24,
+                      ),
+              ),
+            ),
+            
+            const SizedBox(width: 12),
+            
+            // Comic info - Alternative layout with status and date stacked
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bookmark.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Author: ${bookmark.author}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  // Status on separate line
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(bookmark.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      bookmark.status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: _getStatusColor(bookmark.status),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Date on separate line
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDate(bookmark.createdAt),
+                        style: TextStyle(
+                          fontSize: 11,
                           color: Colors.grey[500],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatDate(bookmark.createdAt),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              
-              // Delete button
-              IconButton(
-                onPressed: () => _showDeleteConfirmation(bookmark),
-                icon: Icon(
-                  Icons.bookmark_remove,
-                  color: Colors.red[400],
-                ),
-                tooltip: 'Remove bookmark',
+            ),
+            
+            // Delete button
+            IconButton(
+              onPressed: () => _showDeleteConfirmation(bookmark),
+              icon: Icon(
+                Icons.bookmark_remove,
+                color: Colors.red[400],
               ),
-            ],
-          ),
+              tooltip: 'Remove bookmark',
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
