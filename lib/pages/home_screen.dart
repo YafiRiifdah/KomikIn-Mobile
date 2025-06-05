@@ -188,28 +188,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onGenreSelected(String genreName) {
-    Navigator.pop(context);
-    if (genreName == "All") {
-      if (mounted) {
-        setState(() {
-          _selectedGenreForFilter = "All";
-          _selectedGenreIdForFilter = "";
-        });
-      }
-    } else {
-      final selectedGenre = _fetchedGenres.firstWhere(
-        (g) => g.name == genreName,
-        orElse: () => Genre(id: '', name: 'Unknown', group: ''),
-      );
-      if (selectedGenre.id.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _selectedGenreForFilter = genreName;
-            _selectedGenreIdForFilter = selectedGenre.id;
-          });
-        }
-      }
+    debugPrint("Genre selected: $genreName");
+
+    // Tutup modal jika terbuka
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
     }
+
+    if (!mounted) return;
+
+    setState(() {
+      if (genreName == "All") {
+        _selectedGenreForFilter = "All";
+        _selectedGenreIdForFilter = "";
+      } else {
+        final selectedGenre = _fetchedGenres.firstWhere(
+          (g) => g.name == genreName,
+          orElse: () => Genre(id: '', name: 'Unknown', group: ''),
+        );
+        _selectedGenreForFilter = genreName;
+        _selectedGenreIdForFilter = selectedGenre.id;
+      }
+    });
+
     _fetchInitialLatestComics();
   }
 
@@ -223,6 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
+
     if (_fetchedGenres.isEmpty && !_isLoadingGenres) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -485,13 +487,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (authProvider.username != null && authProvider.username!.isNotEmpty) {
       return authProvider.username!;
     }
-    
+
     if (authProvider.userEmail != null && authProvider.userEmail!.isNotEmpty) {
       // Ambil bagian sebelum @ dari email
       final emailParts = authProvider.userEmail!.split('@');
       return emailParts.isNotEmpty ? emailParts[0] : 'User';
     }
-    
+
     return 'User';
   }
 
@@ -500,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final displayName = _getUserDisplayName(authProvider);
-        
+
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -509,14 +511,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.grey[200],
-                  backgroundImage: authProvider.profileImageUrl != null && 
-                                  authProvider.profileImageUrl!.isNotEmpty
-                      ? MemoryImage(
-                          base64Decode(
-                            authProvider.profileImageUrl!.split(',')[1], // Remove data:image/jpeg;base64,
-                          ),
-                        )
-                      : const AssetImage('assets/images/profile.png') as ImageProvider,
+                  backgroundImage:
+                      authProvider.profileImageUrl != null &&
+                              authProvider.profileImageUrl!.isNotEmpty
+                          ? MemoryImage(
+                            base64Decode(
+                              authProvider.profileImageUrl!.split(
+                                ',',
+                              )[1], // Remove data:image/jpeg;base64,
+                            ),
+                          )
+                          : const AssetImage('assets/images/profile.png')
+                              as ImageProvider,
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -524,10 +530,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Text(
                       'Stay trending!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Text(
                       displayName,
@@ -547,66 +550,69 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Tampilkan konfirmasi logout
                   final shouldLogout = await showDialog<bool>(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Konfirmasi'),
-                      content: const Text('Apakah Anda yakin ingin keluar?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Batal'),
+                    builder:
+                        (context) => AlertDialog(
+                          title: const Text('Konfirmasi'),
+                          content: const Text(
+                            'Apakah Anda yakin ingin keluar?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Batal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Keluar'),
+                            ),
+                          ],
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Keluar'),
-                        ),
-                      ],
-                    ),
                   );
-                  
+
                   if (shouldLogout == true) {
                     await authProvider.logout();
                     if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                        '/login', 
-                        (route) => false,
-                      );
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil('/login', (route) => false);
                     }
                   }
                 }
               },
-              itemBuilder: (context) => [
-                PopupMenuItem<String>(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.person, size: 20),
-                      const SizedBox(width: 8),
-                      Text('Profile (${displayName})'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'settings',
-                  child: Row(
-                    children: [
-                      Icon(Icons.settings, size: 20),
-                      SizedBox(width: 8),
-                      Text('Settings'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem<String>(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Logout', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
+              itemBuilder:
+                  (context) => [
+                    PopupMenuItem<String>(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Profile (${displayName})'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'settings',
+                      child: Row(
+                        children: [
+                          Icon(Icons.settings, size: 20),
+                          SizedBox(width: 8),
+                          Text('Settings'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, size: 20, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Logout', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
             ),
           ],
         );
@@ -708,13 +714,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     : GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.65,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
-                          ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1.05, 
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+
                       itemCount: _latestComics.length,
                       itemBuilder: (context, index) {
                         final comic = _latestComics[index];
@@ -778,9 +784,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.65,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
+                            childAspectRatio: 1.05,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
                           ),
                       itemCount: _popularComics.length,
                       itemBuilder: (context, index) {

@@ -341,7 +341,7 @@ class _ComicListScreenState extends State<ComicListScreen> {
                           padding: const EdgeInsets.all(16),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.7,
+                            childAspectRatio: 1.05,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
                           ),
